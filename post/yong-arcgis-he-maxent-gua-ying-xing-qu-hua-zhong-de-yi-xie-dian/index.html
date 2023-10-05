@@ -1,0 +1,341 @@
+<html lang="zh">
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>用arcgis和maxent适应性区划中的一些点 | Riceneeder</title>
+
+<link rel="shortcut icon" href="https://Riceneeder.github.io/favicon.ico?v=1696503374700">
+
+<link href="https://fastly.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://Riceneeder.github.io/styles/main.css">
+
+<!-- <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+<!-- <script src="https://fastly.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://fastly.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://fastly.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://fastly.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    
+<link rel="stylesheet" href="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/styles/base16/solarized-light.min.css">
+
+<script src="https://fastly.jsdelivr.net/combine/gh/highlightjs/cdn-release@11.3.1/build/highlight.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/cpp.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/csharp.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/c.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/python.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/rust.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/xml.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/javascript.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/powershell.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/shell.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/sql.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/http.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/go.min.js,gh/highlightjs/cdn-release@11.3.1/build/languages/css.min.js"></script>
+
+<!-- <script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/highlight.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/cpp.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/csharp.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/c.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/python.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/rust.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/xml.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/javascript.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/powershell.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/shell.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/sql.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/http.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/go.min.js"></script>
+<script src="https://fastly.jsdelivr.net/gh/highlightjs/cdn-release@11.3.1/build/languages/css.min.js"></script>
+ -->
+
+    <script src="https://fastly.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true});</script>
+
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/viewerjs@1.10.2/dist/viewer.min.css" />
+<script src="https://fastly.jsdelivr.net/npm/viewerjs@1.10.2/dist/viewer.min.js"></script>
+
+    <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+    <script src="https://fastly.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/katex@0.16.4/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            Riceneeder
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="https://Riceneeder.github.io/post/xia-tian" class="menu gt-a-link">
+                    发疯
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1696503374700"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = function () {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    用arcgis和maxent适应性区划中的一些点
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2023-08-17 ·
+                    </time>
+                    
+                        <a href="https://Riceneeder.github.io/tag/NUHUOuwok/" class="post-tags">
+                            # python
+                        </a>
+                    
+                        <a href="https://Riceneeder.github.io/tag/kvqmQ233qD/" class="post-tags">
+                            # arcgis
+                        </a>
+                    
+                        <a href="https://Riceneeder.github.io/tag/Tm8glzx3uO/" class="post-tags">
+                            # 课题
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <p>最近的课题有用到这两个软件，其中做maxent的时候需要气象因子，而在<a href="https://worldclim.org/">worldclim</a>下载的未来生物气象因子只有一张包含19个波段的tif文件，需要手动拆分成19个文件。实在是没有找到用arcgis拆分的方法，所以转向了python。</p>
+<!-- more -->
+<p>代码如下：</p>
+<pre><code class="language-python">import gdal
+import os
+
+input_file = &quot;G:/4.其他/wc2.1_30s_bioc_ACCESS-CM2_ssp126_2041-2060.tif&quot;#下载的tif文件
+output_folder = &quot;G:/4.其他/feature_bio/&quot;#输出文件夹
+
+if not os.path.exists(output_folder):
+   os.makedirs(output_folder)
+
+dataset = gdal.Open(input_file)
+num_bands = dataset.RasterCount
+
+for i in range(num_bands):
+   band = dataset.GetRasterBand(i + 1) 
+   output_file = os.path.join(output_folder, f&quot;bio_{i + 1}.tif&quot;)
+   driver = gdal.GetDriverByName(&quot;GTiff&quot;)
+   new_dataset = driver.Create(output_file, dataset.RasterXSize, dataset.RasterYSize, 1, gdal.GDT_Float32)
+   new_dataset.SetProjection(dataset.GetProjection())
+   new_dataset.SetGeoTransform(dataset.GetGeoTransform())
+   new_dataset.GetRasterBand(1).WriteArray(band.ReadAsArray())
+   print(f&quot;Creating {output_file}...&quot;)
+   new_dataset.FlushCache()
+   new_dataset = None
+
+dataset = None
+</code></pre>
+<p>但是有个问题，安装gdal的时候大概率会报错，具体原因我也没查到。网上的推荐办法是使用conda：</p>
+<pre><code>conda install gdal
+</code></pre>
+<p>实际情况可能会出现无法安装或者安装了没法调用，解决办法：</p>
+<ol>
+<li>如果安装失败：<br>
+到<a href="https://github.com/cgohlke/geospatial-wheels/releases">Github仓库</a>下载对应的.whl文件，比如python 3.11就下载GDAL-3.7.1-cp311-cp311-win_amd64.whl<br>
+，然后手动安装<code>pip install GDAL-3.7.1-cp311-cp311-win_amd64.whl </code></li>
+<li>如果无法调用：<br>
+在python安装各种环境包的文件夹下，如：D:**\python3.9.12\Lib\site-packages\文件夹下，新建gdal.py文件，将以下代码复制进去：<pre><code># import osgeo.gdal as a convenience
+from osgeo.gdal import deprecation_warn
+deprecation_warn('gdal')
+from osgeo.gdal import *
+</code></pre>
+</li>
+</ol>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://Riceneeder.github.io/post/xiao-gong-ju-fen-xiang/" class="post-title gt-a-link">
+                    小工具分享
+                </a>
+            </div>
+        
+
+        
+
+        
+
+        
+            <link href='https://fastly.jsdelivr.net/npm/@waline/client@v2/dist/waline.css' rel='stylesheet' />
+<script src='https://fastly.jsdelivr.net/npm/@waline/client@v2/dist/waline.js'></script>
+
+<style>
+	div#waline{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%;
+	}
+	
+	span.katex { font-size: 20px; }
+	
+	.wl-emoji-popup { font-size: 16px !important; }
+	.wl-emoji-popup button { height: 2em; }
+</style>
+
+
+	<div id="waline"></div>
+
+<script>
+	Waline.init({
+		el: '#waline',
+		login: 'enable',
+		imageUploader: false,
+		search: false,
+		serverURL: 'waline.gankun.cn.ma',
+		pageSize: 5,
+		recordIp: false,
+		pageview: false,
+		commentSorting: 'hottest',
+		emoji: [
+				'//fastly.jsdelivr.net/npm/@waline/emojis/qq',
+				'//fastly.jsdelivr.net/npm/@waline/emojis/tw-emoji'
+		],
+		highlighter: function(code, lang) {
+			return hljs.highlight(code, {language: lang}).value;
+		},
+		texRenderer: function(blockMode, tex) {
+			var str = katex.renderToString(tex, {
+				displayMode: blockMode,
+				throwOnError: false,
+			});
+			return str;
+		}
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">人是铁饭是钢</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/Riceneeder" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme by <a href="https://imhanjie.com/" target="_blank">imhanjie</a>, Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>, <a href="https://Riceneeder.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+        <script>
+  hljs.highlightAll();
+</script>
+
+        <script>
+(function() {
+	function addEventListener(element, type, handler) {
+        if (element.addEventListener) {
+            element.addEventListener(type, handler, false);
+        } else if (element.attachEvent) {
+            element.attachEvent('on' + type, handler);
+        }
+    }
+
+    addEventListener(window, 'load', function () {
+        var Viewer = window.Viewer;
+        var pictures = document.querySelector('.post-content');
+        var viewer = new Viewer(pictures);
+    });
+})();
+</script>
+
+
+        <script>
+            var ele = document.querySelector(".waline-pageview-count");
+            Object.defineProperty(ele, 'innerText', {
+                get: function() {
+                    return ele.innerText;
+                },
+                set: function(value) {
+                    ele.innerHTML = value;
+                    if (value > 0) {
+	                    var parent = document.querySelector(".leancloud_visitors");
+	                    parent.style.visibility="visible";
+	                }
+                }
+            });
+        </script>
+    </div>
+</div>
+</body>
+</html>

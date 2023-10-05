@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://Riceneeder.github.io</id>
+    <title>Riceneeder</title>
+    <updated>2023-10-05T10:56:18.353Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://Riceneeder.github.io"/>
+    <link rel="self" href="https://Riceneeder.github.io/atom.xml"/>
+    <subtitle>人是铁饭是钢</subtitle>
+    <logo>https://Riceneeder.github.io/images/avatar.png</logo>
+    <icon>https://Riceneeder.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2023, Riceneeder</rights>
+    <entry>
+        <title type="html"><![CDATA[生物适应区预测中，使用ENMTools进行冗余样点剔除]]></title>
+        <id>https://Riceneeder.github.io/post/sheng-wu-gua-ying-qu-yu-ce-zhong-shi-yong-enmtools-jin-xing-rong-yu-yang-dian-ti-chu/</id>
+        <link href="https://Riceneeder.github.io/post/sheng-wu-gua-ying-qu-yu-ce-zhong-shi-yong-enmtools-jin-xing-rong-yu-yang-dian-ti-chu/">
+        </link>
+        <updated>2023-08-30T07:03:41.000Z</updated>
+        <content type="html"><![CDATA[<blockquote>
+<p>ENMTools工具筛选数据原理：<br>
+ENMTools工具可以自动匹配分析所用的环境因子栅格大小，可以删除同一栅格内的冗余数据，而不是基于距离法来删除数据。此方法快捷高效，分析结果更合理，英文期刊多用该方法。通过该方法可以删除下图中的A点或B点（同一栅格内），而C点和D点虽然直线距离小于缓冲区范围，但是不会被勿删。<br>
+<img src="https://img-blog.csdnimg.cn/20201221231557349.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80MDYzMjE3Nw==,size_16,color_FFFFFF,t_70#pic_center" alt="" loading="lazy"><br>
+引用CSDN博主「生信小窝」的说法<br>
+原文链接：https://blog.csdn.net/weixin_40632177/article/details/111502337</p>
+</blockquote>
+<p>网上对于ENMTools这个软件或者R程序包的中文教程挺少，大多是英文文章或者原作者的视频，如果直接使用ENMTools这个软件的话，其实要方便很多，教学视频也容易找到。但使用R的教程却少之又少，我刚开始所使用的代码是B站up<a href="https://space.bilibili.com/4763345">和谐小农民</a>给出来的，但存在无法安装ENMTools包或运行过程报错的情况。经过GitHub原项目文档查询和debug，最终修改代码如下：`</p>
+<pre><code>install.packages(&quot;devtools&quot;)
+library(devtools)
+install_github(&quot;danlwarren/ENMTools&quot;,force = TRUE) #可能需要翻墙
+library(ENMTools)
+library(terra)
+worldclim &lt;- raster('G:/4.其他/现在_bio_tif/bio_1.tif') #这里我使用的自己的文件
+# worldclim &lt;- raster::getData(&quot;worldclim&quot;, res = 5,var = &quot;bio&quot;) # 如果自己没有可以使用worldclim提供的数据
+pts &lt;- read.csv(file = &quot;BZ.csv&quot;)
+pts.spat &lt;- vect(pts,geom=c(&quot;X&quot;,&quot;Y&quot;)) #XY替换成你csv中对应的Longitude,Latitude
+pa &lt;- rasterize(as.matrix(crds(pts.spat)), worldclim[[1]],fun=sum)
+new.points &lt;- rasterToPoints(pa)
+write.csv(new.points, file = &quot;BZ.trim.csv&quot;)
+</code></pre>
+<p>使用此代码，我将1164个点位减少到了324个，并且没有像使用ENMTools软件出现坐标偏移的情况。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[用arcgis和maxent适应性区划中的一些点]]></title>
+        <id>https://Riceneeder.github.io/post/yong-arcgis-he-maxent-gua-ying-xing-qu-hua-zhong-de-yi-xie-dian/</id>
+        <link href="https://Riceneeder.github.io/post/yong-arcgis-he-maxent-gua-ying-xing-qu-hua-zhong-de-yi-xie-dian/">
+        </link>
+        <updated>2023-08-17T08:14:03.000Z</updated>
+        <summary type="html"><![CDATA[<p>最近的课题有用到这两个软件，其中做maxent的时候需要气象因子，而在<a href="https://worldclim.org/">worldclim</a>下载的未来生物气象因子只有一张包含19个波段的tif文件，需要手动拆分成19个文件。实在是没有找到用arcgis拆分的方法，所以转向了python。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>最近的课题有用到这两个软件，其中做maxent的时候需要气象因子，而在<a href="https://worldclim.org/">worldclim</a>下载的未来生物气象因子只有一张包含19个波段的tif文件，需要手动拆分成19个文件。实在是没有找到用arcgis拆分的方法，所以转向了python。</p>
+<!-- more -->
+<p>代码如下：</p>
+<pre><code class="language-python">import gdal
+import os
+
+input_file = &quot;G:/4.其他/wc2.1_30s_bioc_ACCESS-CM2_ssp126_2041-2060.tif&quot;#下载的tif文件
+output_folder = &quot;G:/4.其他/feature_bio/&quot;#输出文件夹
+
+if not os.path.exists(output_folder):
+   os.makedirs(output_folder)
+
+dataset = gdal.Open(input_file)
+num_bands = dataset.RasterCount
+
+for i in range(num_bands):
+   band = dataset.GetRasterBand(i + 1) 
+   output_file = os.path.join(output_folder, f&quot;bio_{i + 1}.tif&quot;)
+   driver = gdal.GetDriverByName(&quot;GTiff&quot;)
+   new_dataset = driver.Create(output_file, dataset.RasterXSize, dataset.RasterYSize, 1, gdal.GDT_Float32)
+   new_dataset.SetProjection(dataset.GetProjection())
+   new_dataset.SetGeoTransform(dataset.GetGeoTransform())
+   new_dataset.GetRasterBand(1).WriteArray(band.ReadAsArray())
+   print(f&quot;Creating {output_file}...&quot;)
+   new_dataset.FlushCache()
+   new_dataset = None
+
+dataset = None
+</code></pre>
+<p>但是有个问题，安装gdal的时候大概率会报错，具体原因我也没查到。网上的推荐办法是使用conda：</p>
+<pre><code>conda install gdal
+</code></pre>
+<p>实际情况可能会出现无法安装或者安装了没法调用，解决办法：</p>
+<ol>
+<li>如果安装失败：<br>
+到<a href="https://github.com/cgohlke/geospatial-wheels/releases">Github仓库</a>下载对应的.whl文件，比如python 3.11就下载GDAL-3.7.1-cp311-cp311-win_amd64.whl<br>
+，然后手动安装<code>pip install GDAL-3.7.1-cp311-cp311-win_amd64.whl </code></li>
+<li>如果无法调用：<br>
+在python安装各种环境包的文件夹下，如：D:**\python3.9.12\Lib\site-packages\文件夹下，新建gdal.py文件，将以下代码复制进去：<pre><code># import osgeo.gdal as a convenience
+from osgeo.gdal import deprecation_warn
+deprecation_warn('gdal')
+from osgeo.gdal import *
+</code></pre>
+</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[小工具分享]]></title>
+        <id>https://Riceneeder.github.io/post/xiao-gong-ju-fen-xiang/</id>
+        <link href="https://Riceneeder.github.io/post/xiao-gong-ju-fen-xiang/">
+        </link>
+        <updated>2023-08-11T13:02:48.000Z</updated>
+        <summary type="html"><![CDATA[<p>这个小工具是在做数据处理期间，为了减少自己的工作量临时编写的。主要利用百度地图api对从NSII网站上获取的标本数据批量查询经纬度。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>这个小工具是在做数据处理期间，为了减少自己的工作量临时编写的。主要利用百度地图api对从NSII网站上获取的标本数据批量查询经纬度。</p>
+<!-- more -->
+<p>使用前需要对标本数据做一定的预处理，使标本数据为以下格式的json文件：</p>
+<pre><code class="language-json">[
+    {
+        &quot;NO&quot;: &quot;50&quot;,
+        &quot;CNname&quot;: &quot;白芷&quot;,
+        &quot;LDname&quot;: &quot;Angelica dahurica&quot;,
+        &quot;Province&quot;: &quot;北京市&quot;,
+        &quot;Local&quot;: &quot;百花山&quot;
+    },
+    {
+        &quot;NO&quot;: &quot;51&quot;,
+        &quot;CNname&quot;: &quot;白芷&quot;,
+        &quot;LDname&quot;: &quot;Angelica dahurica&quot;,
+        &quot;Province&quot;: &quot;北京市&quot;,
+        &quot;Local&quot;: &quot;百花山&quot;
+    },
+    {
+        &quot;NO&quot;: &quot;52&quot;,
+        &quot;CNname&quot;: &quot;白芷&quot;,
+        &quot;LDname&quot;: &quot;Angelica dahurica&quot;,
+        &quot;Province&quot;: &quot;北京市&quot;,
+        &quot;Local&quot;: &quot;百花山&quot;
+    },
+    ……
+]
+</code></pre>
+<p>工具是用typescript编写的，所以需要nodejs环境并安装typescript，相关知识网上查询，具体代码如下：</p>
+<pre><code class="language-typescript">import axios from &quot;axios&quot;;
+import fs from &quot;fs&quot;;
+
+interface eachData {
+    NO: string;
+    CNname: string;
+    LDname: string;
+    Province: string;
+    Local: string;
+}
+type AllJsonData = eachData[];
+interface BaiduResult {
+    status: number;
+    result: {
+        location: {
+            lng: number;
+            lat: number;
+        }
+        precise: number;
+        confidence: number;
+        comprehension: number;
+        level: string;
+        analys_level: string;
+    }
+}
+interface AllResult {
+    NO: string;
+    lng: number;
+    lat: number;
+    comprehension: number;
+}
+
+const Sleep = (ms:number) =&gt; {
+    return new Promise(resolve =&gt; setTimeout(resolve, ms))
+}
+
+const jsonData: AllJsonData = require(&quot;./白芷样点数据-NSII.json&quot;);//这里填写你的数据json路径
+
+class LocationRequest {
+    constructor(AllJsonData: AllJsonData) {
+        this.DataSet = AllJsonData;
+    }
+
+    private static BaiduAPIKey = &quot;baiduapikey&quot;;//这里填写自己申请的百度地图apikey，申请方法可网上查询
+    private static Url = &quot;https://api.map.baidu.com/geocoding/v3/&quot;;
+    DataSet: AllJsonData;
+
+    async GetLocationOnce(Local: string, Province: string): Promise&lt;BaiduResult&gt; {
+        const { data } = await axios.get(LocationRequest.Url +
+            &quot;?output=json&amp;ak=&quot; + LocationRequest.BaiduAPIKey +
+            &quot;&amp;address=&quot; + Local +
+            &quot;&amp;city=&quot; + Province +
+            &quot;&amp;extension_analys_level=1&quot;);
+        return data as BaiduResult;
+    }
+
+    async GetAllLocation(): Promise&lt;AllResult[]&gt; {
+        let allResult: AllResult[] = [];
+        for (let i = 0; i &lt; this.DataSet.length; i++) {
+            if(this.DataSet[i].Province != &quot;0未记录&quot; &amp;&amp; this.DataSet[i].Local != &quot;0未记录&quot;){
+                try {
+                    const data = await this.GetLocationOnce(this.DataSet[i].Local, this.DataSet[i].Province);
+                    console.log(`${this.DataSet[i].NO}：经纬度为:${data.result.location.lat},${data.result.location.lng},可解析度为:${data.result.comprehension}`);
+                    allResult.push({
+                        NO: this.DataSet[i].NO,
+                        lng: data.result.location.lng,
+                        lat: data.result.location.lat,
+                        comprehension: data.result.comprehension
+                    })
+                } catch (error) {
+                    console.log(`${this.DataSet[i].NO}的经纬度获取失败!\n${error}`);
+                    allResult.push({
+                        NO: this.DataSet[i].NO,
+                        lng: 0,
+                        lat: 0,
+                        comprehension: 0
+                    })
+                }
+            }else{
+                console.log(`${this.DataSet[i].NO}未记录省市或区!`);
+                allResult.push({
+                    NO: this.DataSet[i].NO,
+                    lng: 0,
+                    lat: 0,
+                    comprehension: 0
+                })
+            }
+            await Sleep(2000);
+        }
+        return allResult;
+    }
+}
+
+async function main() {
+    const data =await new LocationRequest(jsonData).GetAllLocation();
+    try {
+        fs.writeFileSync(&quot;./白芷样点经纬度.json&quot;, JSON.stringify(data));//这里填写你想结果输出的位置的路径
+        console.log(&quot;写入成功!&quot;);
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+main();
+</code></pre>
+<p>成功运行后会输出一个json文件，内容格式如下：</p>
+<pre><code class="language-json">[
+    {
+        &quot;NO&quot;: &quot;29&quot;,
+        &quot;lng&quot;: 115.7844632112745,   //经度
+        &quot;lat&quot;: 33.850642695788835,  //纬度
+        &quot;comprehension&quot;: 100          //可信度
+    },
+    {
+        &quot;NO&quot;: &quot;30&quot;,
+        &quot;lng&quot;: 115.7844632112745,
+        &quot;lat&quot;: 33.850642695788835,
+        &quot;comprehension&quot;: 100
+    },
+    {
+        &quot;NO&quot;: &quot;31&quot;,
+        &quot;lng&quot;: 115.7844632112745,
+        &quot;lat&quot;: 33.850642695788835,
+        &quot;comprehension&quot;: 100
+    },
+    ……
+]
+</code></pre>
+<p>这个课题结束后可能会把这个工具用python重构并整合到我自己的工具脚本里吧</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[成都中医药大学“千种本草基因组计划”发布会成功举办]]></title>
+        <id>https://Riceneeder.github.io/post/cheng-du-zhong-yi-yao-da-xue-qian-chong-ben-cao-ji-yin-zu-ji-hua-fa-bu-hui-cheng-gong-ju-ban/</id>
+        <link href="https://Riceneeder.github.io/post/cheng-du-zhong-yi-yao-da-xue-qian-chong-ben-cao-ji-yin-zu-ji-hua-fa-bu-hui-cheng-gong-ju-ban/">
+        </link>
+        <updated>2022-07-02T10:56:54.000Z</updated>
+        <summary type="html"><![CDATA[<p>7月2日上午，成都中医药大学“千种本草基因组计划”发布会暨研究联盟成立仪式在学校博物馆举行。中国中医科学院名誉院长、中国工程院院士、医药卫生学部主任张伯礼，四川省人大常务委员会副主任何延政，成都中医药大学校长余曙光出席会议并致辞，国家药品监督管理局副局长赵军宁向大会致贺信。来自全国 60余家单位领导和专家出席发布会，线上参会人数达9000人。会议由成都中医药大学副校长彭成主持。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>7月2日上午，成都中医药大学“千种本草基因组计划”发布会暨研究联盟成立仪式在学校博物馆举行。中国中医科学院名誉院长、中国工程院院士、医药卫生学部主任张伯礼，四川省人大常务委员会副主任何延政，成都中医药大学校长余曙光出席会议并致辞，国家药品监督管理局副局长赵军宁向大会致贺信。来自全国 60余家单位领导和专家出席发布会，线上参会人数达9000人。会议由成都中医药大学副校长彭成主持。</p>
+<!--more-->
+<figure data-type="image" tabindex="1"><img src="https://www.cdutcm.edu.cn/Upload/main/ContentManage/Article/image/2022/07/02/549dd36554d84ee3ad3383d2c1dd65d9.jpg" alt="" loading="lazy"></figure>
+<blockquote>
+<p>本计划的意义</p>
+</blockquote>
+<p>本草基因组学通过解读传统药物的生物学机制，提出在获取基因组和基因进传信息的基础上，通过对基因功能的研究和开发来解决中药研究中面临的一系列难题，其中包括建立用于次生代谢产物生物合成及其调控研究的药用模式生物体系，通过合成生物学生产重要的天然药物或新药原料，利用基因组辅助有种培有中草药优良品种，开发用于鉴别中药材混伤品的分子标记，揭示药材道地性的生物学本质，建立本草数据库保护珍贵的药用植物基因资源，以及研究人类基因组遗传多态性和肠道微生物的多样性对中药体内代谢和药效影响等方面产生深远的影响。<br>
+<img src="https://www.cdutcm.edu.cn/Upload/main/ContentManage/Article/image/2022/07/02/0b1dd1b9d23e4e79bd67ee2f3e11b31e.jpg" alt="张伯礼院士" loading="lazy"></p>
+<h2 id="1本草基因组学将开展多种药用植物遗传密码的解析是濒危本草保育及物种多样性延续的基础">1.本草基因组学将开展多种药用植物遗传密码的解析，是濒危本草保育及物种多样性延续的基础</h2>
+<p>近年来，随着中药产业的快速发展，国内外对中药资源的需求量急剧增加，不合理的采挖野生资源现象屡见不鲜，加速了药用植物遗传资源多样性的消失，资源灭绝的风险越来越大。同时，大多数栽培的药用植物多采用无性繁殖手段就行繁衍，长期无性繁殖伴随的种质资源退化也对中药的品质及适应性造成了严重的影响。</p>
+<figure data-type="image" tabindex="2"><img src="https://www.cdutcm.edu.cn/Upload/main/ContentManage/Article/image/2022/07/02/c26368bb45b445f08399c944e80a3c6d.jpg" alt="余曙光校长" loading="lazy"></figure>
+<p>通过开展本草基因组研究，结合药用植物重要次生代谢产物含量、抗病、抗逆等优良性状的研究，从遗传机制上解析优良性状的成因，为“优质、优形”新品种选育提供了基础。同时，结合广泛种质资源收集，结合药用植物遗传多样性研究，制定濒危药用植物就地及迁地保护体系，提供科学的濒危本草保育及物种多样性策略。</p>
+<h2 id="2通过药用植物有效成分的合成及其调控研究建立药用模式植物库">2.通过药用植物有效成分的合成及其调控研究，建立药用模式植物库</h2>
+<p>模式生物在当今生命科学和医学研究中发挥着重要作用，而缺少成熟的模式生物研究体系是药用生物研究与其他生物学领域相比还相对落后的一个重要原因。建立药用模式植物能极大地推动药用植物的生长发育、生理生化、抗病抗逆和分子有种等领域的发展。在本草基因组学研究的推动下，灵芝、丹参和长春花等一批药用模式生物研究体系正在建立之中。将科研力量集中于少数药用模式生物，优先阐明次生代谢产物合成的普遍规律，并在其他药用生物中进行推广和验证，可以有效提升药用生物基础研究水平。模式药用植物突变体库的建立和基因功能研究。模式药用植物全基因组序列的测定和大规模突变体库的建立，将为药用植物研究提供丰富的资源和材料，并极大地推动药用植物功能基因，尤其是次生代谢相关基因的发掘进程。</p>
+<p>本草基因组计划将会推动转录组学、蛋白组学和代谢组学等“组学”方法，在药用植物次生代谢途径和次生代谢调控研究中的应用，为次生代谢相关基因的“批量化”发掘奠定基础。研究成果将会对次生代谢产物的生物合成及代谢工程、高药效成分种质资源的选育等应用领域产生直接影响。</p>
+<h2 id="3破译中药的遗传信息揭示中药作用机理及其道地性形成机制">3.破译中药的遗传信息，揭示中药作用机理及其道地性形成机制</h2>
+<p>近年，学者对中药道地性的研究越来越深入，分子及基因组学层次的研究也逐渐成为了一个热点。药材不同基原植物和种质资源遗传多样性的差异，以及生长发育依据不同的环境及气候条件，产生差异化的成分积累，进而对中药道地性的形成、变迁产生重要影响。</p>
+<p>通过基因组或转录组的序列信息，开发出海量的简单重复序列(SSR)和单核甘酸多态性(SNP)等分子标记，找出药材不同基原植物和差异化种质资源的特定基因或DNA序列后，即可将特异性基因或DNA序列作为标志物用于其鉴定。本草基因组研究团队陈士林教授在国际上创建了基于ITS2的中草药DNA条形码鉴定方法体系，完成专著《中国药典中药材DNA条形码标准序列》，从基因层面解决中草药物种真伪鉴定的难题。</p>
+<figure data-type="image" tabindex="3"><img src="https://www.cdutcm.edu.cn/Upload/main/ContentManage/Article/image/2022/07/02/bded6a48553e4b0b910ee35470743703.jpg" alt="“千种本草基因组计划”学术交流会" loading="lazy"></figure>
+<p>本草基因组学研究产生的序列信息库为开发药材分子标记提供了丰富基因资源，为揭示中药药效的物质基础和可能道地性形成机制提供了有效支撑。</p>
+<h2 id="4本草基因组的实施是中医药现代化的必由之路">4.本草基因组的实施，是中医药现代化的必由之路</h2>
+<p>过去四五十年的时间里，中药的诸多研究成果得益于通过化学方式研究其毒理及药理。其中，标志性成果即中国中医科学院中药研究所屠呦呦研究员团队从青蒿中分离纯化出具有良好抗疟疾活性的青蒿素。</p>
+<p>现阶段，“本草基因组计划”为中草药的研究打开了另一扇窗。该计划的研究成果将为阐明药用植物有效成分的合成和调控奠定基础，进而促进植物类药物的筛选和生物合成研究，同时该计划还将加速药用植物优良品种的选育并促进绿色中药农业的科学化和规模化发展。随着测序技术的逐步成熟和新的测序技术的出现，相信将有更多的药用植物物种被纳入到本草基因组计划中。</p>
+<hr>
+<p>总之，中医药的现代化，急需引进当代最先进的技术和方法，而中药基因组学应是其中重要的一种。习近平总书记强调“把科技的命脉牢牢掌握在自己手中”。我们应该抓住机遇，积极行动，扎扎实实地促进中医药的现代化。“千种本草基因组计划”这一计划及研究联盟的成功建立，将增强我国中药基础研究实力、提高我国中药研究的自主创新能力，促进中草药基因资源的保护和利用，对加速中草药现代化进程具有重大的战略性科学意义，将使中草药生物学研究从分子理化研究水平，全面推进到更高的基因组学时代！</p>
+]]></content>
+    </entry>
+</feed>
